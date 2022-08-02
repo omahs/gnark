@@ -454,6 +454,7 @@ func (f *field[T]) assertIsEqual(a, b Element[T]) Element[T] {
 	if err != nil {
 		panic(fmt.Sprintf("hint error: %v", err))
 	}
+	// TODO: should assert width?
 
 	kp := (f.Mul(k, p)).(Element[T])
 
