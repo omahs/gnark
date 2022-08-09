@@ -76,3 +76,24 @@ func TestNewBipartite(t *testing.T) {
 	t.Log(pre)
 	t.Log(post)
 }
+
+func TestRouting(t *testing.T) {
+	p := permutation{
+		{0, 7}, {1, 6}, {2, 5}, {3, 8}, {4, 0}, {5, 3}, {6, 2}, {7, 1}, {8, 4},
+		// {0, 6}, {2, 4}, {4, 0}, {6, 2},
+		// {0, 3}, {1, 2}, {2, 0}, {3, 1},
+		// {2, 4}, {4, 2},
+		// {0, 0}, {1, 2}, {2, 1},
+		// {0,1}, {1,0},
+		// {0, 0}, {1, 1},
+		// {0, 0},
+	}
+	ss := routing(p)
+	t.Log(ss)
+}
+
+func TestPerm2(t *testing.T) {
+	a := []int{4, 7, 6, 5, 2, 8, 0, 1, 3}
+	p := sortedWithPermutation2(a)
+	t.Log(p)
+}

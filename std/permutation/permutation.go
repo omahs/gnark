@@ -19,6 +19,34 @@ import (
 
 type permutation [][2]int
 
+func (p permutation) isValid() bool {
+	// all indices must exist
+	a1 := make(map[int]struct{})
+	a2 := make(map[int]struct{})
+	for i := range p {
+		if _, ok := a1[p[i][0]]; ok {
+			return false
+		}
+		if _, ok := a2[p[i][1]]; ok {
+			return false
+		}
+		a1[p[i][0]] = struct{}{}
+		a2[p[i][1]] = struct{}{}
+	}
+	if len(a1) != len(p) || len(a2) != len(p) {
+		return false
+	}
+	for i := 0; i < len(p); i++ {
+		if _, ok := a1[i]; !ok {
+			return false
+		}
+		if _, ok := a2[i]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func sortedWithPermutation(in []*big.Int) permutation {
 	p := make(permutation, len(in))
 	for i := range p {
@@ -34,9 +62,32 @@ func sortedWithPermutation(in []*big.Int) permutation {
 	return p
 }
 
+func sortedWithPermutation2(in []int) permutation {
+	p := make(permutation, len(in))
+	for i := range p {
+		p[i][0] = i
+		p[i][1] = i
+	}
+	sort.Slice(p, func(i, j int) bool {
+		return in[p[i][1]] < in[p[j][1]]
+	})
+	for i := range p {
+		p[i][1] = i
+	}
+	return p
+}
+
+func permutationFromMapping(before, after []int) permutation {
+	if len(before) != len(after) {
+		panic("diff lengths")
+	}
+	return nil
+}
+
 type vertex struct {
 	vals  []int
 	edges []*edge
+	index int
 }
 
 func (v vertex) String() string {
@@ -93,51 +144,67 @@ func (e edge) String() string {
 }
 
 type bipartite struct {
-	left      []*vertex
-	right     []*vertex
+	left  []*vertex
+	right []*vertex
+	edges []*edge
+	permutation
 	isColored bool
 	isOdd     bool
 }
 
 func newBipartite(p permutation) *bipartite {
+	if !p.isValid() {
+		return nil
+	}
 	bp := bipartite{
-		left:  make([]*vertex, (len(p)+1)/2),
-		right: make([]*vertex, (len(p)+1)/2),
-		isOdd: len(p)%2 == 1,
+		left:        make([]*vertex, (len(p)+1)/2),
+		right:       make([]*vertex, (len(p)+1)/2),
+		isOdd:       len(p)%2 == 1,
+		permutation: p,
+		isColored:   false,
 	}
 	for i := 0; i < len(p)/2; i++ {
 		bp.left[i] = &vertex{
-			vals: make([]int, 2),
+			vals:  make([]int, 2),
+			index: i,
 		}
 		bp.right[i] = &vertex{
-			vals: make([]int, 2),
+			vals:  make([]int, 2),
+			index: i,
 		}
 	}
 	if bp.isOdd {
 		bp.left[len(p)/2] = &vertex{
-			vals: make([]int, 1),
+			vals:  make([]int, 1),
+			index: len(p) / 2,
 		}
 		bp.right[len(p)/2] = &vertex{
-			vals: make([]int, 1),
+			vals:  make([]int, 1),
+			index: len(p) / 2,
 		}
 	}
-	m := make(map[int]int)
-	for i, pp := range p {
-		m[pp[0]] = i
-	}
+	// m := make(map[int]int)
+	// for i, pp := range p {
+	// 	m[pp[0]] = i
+	// }
 	for _, pp := range p {
-		bp.left[m[pp[0]]/2].vals[m[pp[0]]%2] = pp[0]
-		bp.right[m[pp[1]]/2].vals[m[pp[1]]%2] = pp[0]
+		// bp.left[m[pp[0]]/2].vals[m[pp[0]]%2] = pp[0]
+		// bp.right[m[pp[1]]/2].vals[m[pp[1]]%2] = pp[0]
+		bp.left[pp[0]/2].vals[pp[0]%2] = pp[0]
+		bp.right[pp[1]/2].vals[pp[1]%2] = pp[0]
 		edge := &edge{
 			vertices: [2]*vertex{
-				bp.left[m[pp[0]]/2],
-				bp.right[m[pp[1]]/2],
+				// bp.left[m[pp[0]]/2],
+				// bp.right[m[pp[1]]/2],
+				bp.left[pp[0]/2],
+				bp.right[pp[1]/2],
 			},
 			permPoints: [2]int{pp[0], pp[1]},
 			direction:  none,
 		}
 		edge.vertices[0].edges = append(edge.vertices[0].edges, edge)
 		edge.vertices[1].edges = append(edge.vertices[1].edges, edge)
+		bp.edges = append(bp.edges, edge)
 	}
 	return &bp
 }
@@ -250,12 +317,85 @@ func (bp *bipartite) switchStates() (pre, post []switchState) {
 	return
 }
 
-func routing(p permutation) [][]switchState {
+// func (bp *bipartite) graphs() (bipartite, bipartite) {
+// 	pre, post := bp.switchStates()
+// 	var ue, le []*edge
+// 	for _, e := range bp.edges {
+// 		e := &edge{
+// 			permPoints: e.permPoints,
+// 			direction:  none,
+// 		}
+// 		if e.direction == up {
+// 			ue = append(ue, e)
+// 		} else {
+// 			le = append(le, e)
+// 		}
+// 	}
+// }
+
+func (bp *bipartite) innerPermutation() permutation {
+	// pre, post := bp.switchStates()
+	// p := make(permutation, len(bp.permutation))
+	// for i := range pre {
+	// 	var t1, t2 int
+	// 	if pre[i] == swap {
+	// 		t1 = 1
+	// 	}
+	// 	if post[i] == swap {
+	// 		t2 = 1
+	// 	}
+	// 	p1 := bp.permutation[2*i+t1][0]
+	// 	p2 := bp.permutation[2*i+(1-t2)]
+	// }
+	// if bp.isOdd {
+	// 	p[len(p)-1] = bp.permutation[len(p)-1]
+	// }
+	// for i := 0; i < len(bp.left); i++ {
+	// 	p1 := bp.left[i].vals[t1]
+	// 	var p2 int
+
+	// 	p2 = bp.left[i].edges[0].permPoints[t2]
+	// 	// p2 := bp.right[i].vals[t2]
+	// 	p = append(p, [2]int{p1, p2})
+	// 	if len(bp.left[i].edges) == 2 {
+	// 		pp1 := bp.left[i].vals[1-t1]
+	// 		pp2 := bp.left[i].edges[1].permPoints[1-t2]
+	// 		// pp2 := bp.right[i].vals[1-t2]
+	// 		p = append(p, [2]int{pp1, pp2})
+	// 	}
+	// }
 	return nil
 }
 
-// sortHint creates a Waksman routing which returns the inputs sorted. The hint
-// returns the (upper) values of all switches in order.
-func sortHint(_ *big.Int, inputs []*big.Int, outputs []*big.Int) error {
+func routing(p permutation) [][]switchState {
+	bp := newBipartite(p)
+	pre, post := bp.switchStates()
+	innerPerm := bp.innerPermutation()
+	fmt.Println(p, pre, post, innerPerm)
+	fmt.Println(bp)
 	return nil
+	if len(p) == 1 {
+		return [][]switchState{}
+	}
+	if len(p) == 2 {
+		return [][]switchState{{pre[0] != post[0]}}
+	}
+	var perms [2]permutation
+	for i, pp := range innerPerm {
+		if i == len(innerPerm)-1 {
+			perms[1] = append(perms[1], pp)
+		} else {
+			perms[i%2] = append(perms[i%2], pp)
+		}
+	}
+	states := [][][]switchState{routing(perms[0]), routing(perms[1])}
+	res := [][]switchState{pre}
+	for i := 0; i < len(states[0]); i++ {
+		var layer []switchState
+		layer = append(layer, states[0][i]...)
+		layer = append(layer, states[1][i]...)
+		res = append(res, layer)
+	}
+	res = append(res, post)
+	return res
 }
