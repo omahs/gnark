@@ -10,22 +10,24 @@ import (
 // TODO: remove the file. It is a simple substitute until fix the routing network.
 
 func Sort(api frontend.API, in []frontend.Variable) []frontend.Variable {
-	sorted, err := api.NewHint(stupidSortHint, len(in), in...)
+	sorted, err := api.NewHint(StupidSortHint, len(in), in...)
 	if err != nil {
 		panic(err)
 	}
-	var leftProd frontend.Variable = 1
-	var rightProd frontend.Variable = 1
+	var inProd frontend.Variable = 1
 	for i := range in {
-		leftProd = api.Mul(leftProd, in[i])
-		rightProd = api.Mul(rightProd, sorted[i])
+		inProd = api.Mul(api.Add(in[i], 999), inProd)
 	}
-	api.AssertIsEqual(leftProd, rightProd)
+	var sortedProd frontend.Variable = 1
+	for i := range sorted {
+		sortedProd = api.Mul(api.Add(sorted[i], 999), sortedProd)
+	}
+	api.AssertIsEqual(inProd, sortedProd)
 	return sorted
 }
 
 // sortHint creates a Waksman routing which returns the inputs sorted.
-func stupidSortHint(_ *big.Int, inputs []*big.Int, outputs []*big.Int) error {
+func StupidSortHint(_ *big.Int, inputs []*big.Int, outputs []*big.Int) error {
 	sorted := make([]*big.Int, len(inputs))
 	for i := range sorted {
 		sorted[i] = new(big.Int).Set(inputs[i])

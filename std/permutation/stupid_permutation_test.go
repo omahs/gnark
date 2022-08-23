@@ -56,7 +56,7 @@ func TestStupidSort(t *testing.T) {
 	}
 	assert := test.NewAssert(t)
 	assert.ProverSucceeded(&circuit, &witness,
-		test.WithProverOpts(backend.WithHints(stupidSortHint)),
+		test.WithProverOpts(backend.WithHints(StupidSortHint)),
 		test.WithCurves(ecc.BN254),
 	)
 }
